@@ -86,7 +86,6 @@ def tt_error(nsrc=300, N=100, L=50.0, freqmin=75.0e3, freqmax=400.0e3):
 	# Loop over realisation.
 	for i in range(N):
 	    
-	    print('wavefield realisation %d' % i)
 	    u_syn=np.zeros((nrec,n))
 	    u_obs=np.zeros((nrec,n))
 	    
@@ -96,9 +95,7 @@ def tt_error(nsrc=300, N=100, L=50.0, freqmin=75.0e3, freqmax=400.0e3):
 	    for isrc in range(nsrc):
 
 	        # Time series for one source.
-	        srcwvlt=np.random.randn(n)
-	        # Apply bandpass filter.
-	        srcwvlt=bandpass(srcwvlt,freqmin=freqmin,freqmax=freqmax,df=df,corners=4,zerophase=True)
+	        srcwvlt=0.5-np.random.rand(n)
 	        
 	        # Loop over receivers.
 	        for irec in range(nrec):
@@ -117,9 +114,13 @@ def tt_error(nsrc=300, N=100, L=50.0, freqmin=75.0e3, freqmax=400.0e3):
 	            
 	    # Compute and stack correlations.
 	    for irec in range(1,nrec):
-	        # Linear stack.
+	        # Correlation.
 	        cc_i_syn=corr(u_syn[0,:],u_syn[irec,:],maxlag)
 	        cc_i_obs=corr(u_obs[0,:],u_obs[irec,:],maxlag)
+	        # Bandpass.
+	        cc_i_syn=bandpass(cc_i_syn,freqmin=freqmin,freqmax=freqmax,df=df,corners=4,zerophase=True)
+	        cc_i_obs=bandpass(cc_i_obs,freqmin=freqmin,freqmax=freqmax,df=df,corners=4,zerophase=True)
+	        # Linear stack.
 	        cc_syn[irec,:]+=cc_i_syn
 	        cc_obs[irec,:]+=cc_i_obs
 	        # Phase weights.
@@ -144,7 +145,6 @@ def tt_error(nsrc=300, N=100, L=50.0, freqmin=75.0e3, freqmax=400.0e3):
 	# Predicted traveltimes between receiver 0 and receiver irec.
 	tt_syn=1000*np.sqrt((x_rec[0]-x_rec[irec])**2+(y_rec[0]-y_rec[irec])**2)/c_syn
 	tt_obs=1000*np.sqrt((x_rec[0]-x_rec[irec])**2+(y_rec[0]-y_rec[irec])**2)/c_obs
-	print('predicted traveltime: %f ms' % tt_syn)
 
 	# Analytical traveltime difference. =====================================
 
@@ -163,8 +163,8 @@ def tt_error(nsrc=300, N=100, L=50.0, freqmin=75.0e3, freqmax=400.0e3):
 
 	# Define measurement window.
 	T_win=0.5/freqmin
-	t_min=tt_syn-2000.0*T_win/1.0
-	t_max=tt_syn+2000.0*T_win/1.0
+	t_min=tt_syn-2000.0*T_win/0.2
+	t_max=tt_syn+2000.0*T_win/0.2
 	win=np.array([t_interp>t_min]).astype(float)*np.array([t_interp<t_max]).astype(float)
 	win=win[0]
 
@@ -178,10 +178,6 @@ def tt_error(nsrc=300, N=100, L=50.0, freqmin=75.0e3, freqmax=400.0e3):
 	ddtt=dtt_analytic-dtt_numeric
 	ddtt_rel=100.0*ddtt/tt_syn
 	dv=-c_syn*ddtt/tt_syn
-
-	print('absolute time shift error: %g ms' % ddtt )
-	print('relative time shift error: %g percent' % ddtt_rel)
-	print('velocity error: %g m/s' % dv)
 
 	return ddtt, ddtt_rel, dv
 	
